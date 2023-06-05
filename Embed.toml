@@ -1,0 +1,29 @@
+[default.general]
+chip = "STM32L4R5ZITxP"
+
+[default.rtt]
+enabled = true
+# Whether timestamps in the RTTUI are enabled
+show_timestamps = true
+# Whether to save rtt history buffer on exit.
+log_enabled = true
+# Where to save rtt history buffer relative to manifest path.
+log_path = "./logs"
+
+[default.gdb]
+enabled = true
+gdb_connection_string = "127.0.0.1:1337"
+
+[rtt.general]
+chip = "STM32L4R5ZITxP"
+
+[rtt.rtt]
+enabled = true
+
+[rtt.flashing]
+enabled = false
+
+[rtt.gdb]
+enabled = false
+gdb_connection_string = "127.0.0.1:1337"
+
