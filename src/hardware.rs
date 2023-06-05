@@ -12,11 +12,13 @@ pub mod mono;
 mod rcc;
 mod timer;
 // mod uart;
-mod uartasync;
+pub mod uartasync;
 
 /// Expose RAL for rtic to use as a device.
 /// Note: RTIC will take _all_ peripherals.
 pub use stm32ral as rtic_device;
+
+pub use self::uartasync::UART;
 
 use self::gpio::{PinMode, PinN, Port};
 // use self::uart::*;
@@ -34,6 +36,7 @@ pub struct Board {
     pub blue_led: Pin,
     pub green_led: Pin,
     pub timer: Timer<1_000_000>,
+    pub uart: UART,
 }
 
 /// This is the entry function for the hardware crate.
@@ -65,11 +68,14 @@ pub fn board_init(device: stm32ral::Peripherals) -> Board {
     mono::Mono::start(device.TIM5, &clocks);
     // let _clock_out = Pin::new(Port::A, PinN::P8, PinMode::Alt(0));
 
+    let uart = UART::new(device.USART2, modem_tx, modem_rx,  &clocks);
+
     Board {
         clocks,
         red_led,
         green_led,
         blue_led,
         timer,
+        uart,
     }
 }
