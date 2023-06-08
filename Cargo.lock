@@ -472,6 +472,7 @@ dependencies = [
  "embassy-sync",
  "embedded-hal-async",
  "embedded-hal-nb",
+ "embedded-io",
  "fugit",
  "fugit-timer",
  "heapless",

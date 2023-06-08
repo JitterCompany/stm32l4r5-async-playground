@@ -2,7 +2,11 @@ use core::ops::Deref;
 use core::task::Poll;
 
 use embassy_sync::waitqueue::AtomicWaker;
-use embedded_hal_async::serial::{Write, Error as HALErrorTrait, ErrorKind, ErrorType};
+use embedded_hal_async::serial::{Error as HALErrorTrait, ErrorKind, ErrorType, Write};
+use embedded_io::{
+    Io,
+    asynch::{Write as AsyncWrite}
+};
 use stm32ral::{modify_reg, reset_reg, write_reg};
 use stm32ral::{read_reg, usart};
 
@@ -23,12 +27,7 @@ static WAKER: AtomicWaker = AtomicWaker::new();
 const UART_FIFO_SIZE: usize = 8;
 
 impl UART {
-    pub fn new(
-        uart: usart::Instance,
-    tx: Pin,
-    rx: Pin,
-    clocks: &Clocks,
-    ) -> Self {
+    pub fn new(uart: usart::Instance, tx: Pin, rx: Pin, clocks: &Clocks) -> Self {
         if uart.deref() as *const _ != usart::USART2 {
             panic!("UART must be USART2");
         }
@@ -88,7 +87,6 @@ impl UART {
             _tx: tx,
             _rx: rx,
         }
-
     }
 
     fn write_byte(&mut self, byte: u8) {
@@ -99,14 +97,14 @@ impl UART {
         read_reg!(usart, self.uart, ISR, TXFE == 1)
     }
 
-    async fn write(&mut self, words: &[u8]) -> Result<(), Error> {
+    async fn write(&mut self, words: &[u8]) -> Result<usize, Error> {
         for chunk in words.chunks(UART_FIFO_SIZE as usize) {
             for &byte in chunk {
                 self.write_byte(byte)
             }
             UartFuture::new(Event::TxFiFoEmpty).await;
         }
-        Ok(())
+        Ok(words.len())
     }
 
     async fn flush(&mut self) -> Result<(), Error> {
@@ -133,9 +131,13 @@ impl UART {
     }
 }
 
-impl Write for UART {
-    async fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
-        self.write(words).await
+impl Io for UART {
+    type Error = self::Error;
+}
+
+impl AsyncWrite for UART {
+    async fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+        self.write(buf).await
     }
 
     async fn flush(&mut self) -> Result<(), Self::Error> {
@@ -168,8 +170,8 @@ impl UartFuture {
 
     fn event_bit_is_clear(&self) -> bool {
         match self.event {
-            Event::TxDone => unsafe { read_reg!(usart, USART2, ISR, TC == 0) }
-            Event::TxFiFoEmpty => unsafe { read_reg!(usart, USART2, ISR, TXFE == 0) }
+            Event::TxDone => unsafe { read_reg!(usart, USART2, ISR, TC == 0) },
+            Event::TxFiFoEmpty => unsafe { read_reg!(usart, USART2, ISR, TXFE == 0) },
         }
     }
 }
@@ -190,7 +192,6 @@ impl core::future::Future for UartFuture {
     }
 }
 
-
 #[derive(Debug)]
 pub enum Error {
     SomeError,
@@ -206,3 +207,8 @@ impl ErrorType for UART {
     type Error = Error;
 }
 
+impl embedded_io::Error for Error {
+    fn kind(&self) -> embedded_io::ErrorKind {
+        embedded_io::ErrorKind::Other
+    }
+}

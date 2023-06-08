@@ -8,7 +8,7 @@ mod rtt_logger;
 
 use panic_rtt_target as _;
 use rtic::app;
-use embedded_hal_async::serial::{Write};
+use embedded_io::asynch::{Write};
 use fugit::ExtU64;
 
 use hardware::{mono::Mono, uartasync};
