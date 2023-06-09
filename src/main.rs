@@ -6,10 +6,10 @@
 mod hardware;
 mod rtt_logger;
 
+use embedded_io::asynch::{Read, Write};
+use fugit::ExtU64;
 use panic_rtt_target as _;
 use rtic::app;
-use embedded_io::asynch::{Write};
-use fugit::ExtU64;
 
 use hardware::{mono::Mono, uartasync};
 #[app(device=hardware::rtic_device, peripherals = true, dispatchers = [SPI1, SPI2])]
@@ -25,7 +25,7 @@ mod app {
         red_led: hardware::Pin,
         green_led: hardware::Pin,
         blue_led: hardware::Pin,
-        uart: hardware::UART
+        uart: hardware::UART,
     }
 
     const SYSCLK_HZ: u32 = 80_000_000;
@@ -74,10 +74,15 @@ mod app {
 
         let mut num = 0usize;
 
+        let mut buf = [0u8; 10];
         loop {
-            uart.write("BLINK\n".as_bytes()).await.unwrap();
-            log::info!("BLINK {}", num);
-            num+=1;
+            let num_read = uart.read(&mut buf).await.unwrap();
+            log::info!("{} Bytes read, send back", num_read);
+
+            uart.write(&mut buf[0..num_read]).await.unwrap();
+            // uart.write("BLINK\n".as_bytes()).await.unwrap();
+            // log::info!("BLINK {}", num);
+            num += 1;
             Mono::delay(2u64.millis()).await;
             blueled.toggle();
         }
@@ -91,7 +96,6 @@ mod app {
             uartasync::UART::isr();
         }
         cx.local.red_led.toggle();
-
     }
 
     #[task(binds=TIM5, priority=7)]

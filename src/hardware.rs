@@ -68,7 +68,7 @@ pub fn board_init(device: stm32ral::Peripherals) -> Board {
     mono::Mono::start(device.TIM5, &clocks);
     // let _clock_out = Pin::new(Port::A, PinN::P8, PinMode::Alt(0));
 
-    let uart = UART::new(device.USART2, modem_tx, modem_rx,  &clocks);
+    let uart = UART::new(device.USART2, modem_tx, modem_rx, &clocks);
 
     Board {
         clocks,
